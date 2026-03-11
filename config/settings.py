@@ -8,6 +8,9 @@ load_dotenv()
 
 class Settings(BaseSettings):
     """Application settings"""
+
+    APP_API_NAME: str = os.getenv("APP_API_NAME", "My FastAPI Application")
+    APP_API_VERSION: str = os.getenv("APP_API_VERSION", "1.0.0")    
     
     # API Keys configuration
     APP_API_KEY: str = os.getenv("APP_API_KEY", "")
@@ -71,6 +74,8 @@ class Settings(BaseSettings):
     EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "user@example.com")
     EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "password")
     EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "t")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", f"noreply@{os.getenv('APP_API_NAME', 'example.com').replace(' ', '').lower()}.com")
+    EMAIL_PATH_TEMPLATE: str = os.getenv("EMAIL_PATH_TEMPLATE", os.path.join(BASE_DIR, "app", "utils", "mail", "templates"))
 
     # environment configuration
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
