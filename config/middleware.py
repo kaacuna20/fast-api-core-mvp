@@ -3,13 +3,9 @@ from enum import StrEnum
 from starletter.middleware.base import BaseHTTPMiddleware
 from typing import Dict, List, Optional
 from collections import defaultdict
-from .logging import getLogger
 from fastapi import Response, Request
 from .settings import Settings
-
-settings = Settings()
-
-
+from config.logging import configure_logging, LogLevels
 
 
 class MiddlewareTypes(StrEnum):
@@ -29,7 +25,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, public_paths: Optional[List[str]] = None):
         super().__init__(app)
         self.public_paths = public_paths or ["/docs", "/openapi.json", "/redoc", "/health"]
-        self.logger = getLogger()
+        self.logger = configure_logging(LogLevels.INFO)
     
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -39,9 +35,9 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         # Check API key
-        api_key = request.headers.get(settings.APP_API_KEY_HEADER)
+        api_key = request.headers.get(Settings.APP_API_KEY_HEADER)
         
-        if not api_key or api_key not in settings.APP_API_KEY.split(","):
+        if not api_key or api_key not in Settings.APP_API_KEY.split(","):
             self.logger.warning(f"Invalid API key attempt from {request.client.host} to {path}")
             return Response(
                 content='{"detail": "Invalid or missing API key"}',
@@ -51,6 +47,32 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         
         self.logger.info(f"Valid API key from {request.client.host} to {path}")
         return await call_next(request)
+    
+
+class RestrictedRoutesMiddleware(BaseHTTPMiddleware):
+    """Middleware to restrict access to certain routes based on IP or other criteria"""
+    
+    def __init__(self, app, public_paths: Optional[List[str]] = None):
+        super().__init__(app)
+        if Settings.ENVIRONMENT == "production":
+            self.restricted_paths = public_paths or ["/health", "/favicon.ico","/auth/token", "/auth/register", "/auth/login"]
+        else:
+            self.public_paths = public_paths or ["/docs", "/openapi.json", "/redoc", "/health", "/favicon.ico", "/auth/token", "/auth/register", "/auth/login"]
+        self.logger = configure_logging(LogLevels.INFO)
+    
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        
+        if any(path.startswith(public_path) for public_path in self.public_paths):
+            client_ip = request.client.host
+            self.logger.warning(f"Restricted route access attempt from {client_ip} to {path}")
+            return Response(
+                content='{"detail": "Access to this route is restricted"}',
+                status_code=403,
+                media_type="application/json"
+            )
+        
+        return await call_next(request)
 
 
 class CORSMiddleware(BaseHTTPMiddleware):
@@ -58,14 +80,14 @@ class CORSMiddleware(BaseHTTPMiddleware):
     
     def __init__(self, app):
         super().__init__(app)
-        self.logger = getLogger()
+        self.logger = configure_logging(LogLevels.INFO)
     
     async def dispatch(self, request: Request, call_next):
         origin = request.headers.get("origin")
         
         # Handle preflight requests
         if request.method == "OPTIONS":
-            if origin in settings.CORS_ALLOWED_ORIGINS:
+            if origin in Settings.CORS_ALLOWED_ORIGINS:
                 return Response(
                     status_code=200,
                     headers=self._get_cors_headers(origin)
@@ -76,7 +98,7 @@ class CORSMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         
         # Add CORS headers to response if origin is allowed
-        if origin in settings.CORS_ALLOWED_ORIGINS:
+        if origin in Settings.CORS_ALLOWED_ORIGINS:
             for header, value in self._get_cors_headers(origin).items():
                 response.headers[header] = value
         
@@ -86,10 +108,10 @@ class CORSMiddleware(BaseHTTPMiddleware):
         """Get CORS headers for allowed origin"""
         return {
             "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": str(settings.CORS_ALLOW_CREDENTIALS).lower(),
-            "Access-Control-Allow-Methods": ", ".join(settings.CORS_ALLOW_METHODS),
-            "Access-Control-Allow-Headers": ", ".join(settings.CORS_ALLOW_HEADERS),
-            "Access-Control-Max-Age": str(settings.CORS_MAX_AGE),
+            "Access-Control-Allow-Credentials": str(Settings.CORS_ALLOW_CREDENTIALS).lower(),
+            "Access-Control-Allow-Methods": ", ".join(Settings.CORS_ALLOW_METHODS),
+            "Access-Control-Allow-Headers": ", ".join(Settings.CORS_ALLOW_HEADERS),
+            "Access-Control-Max-Age": str(Settings.CORS_MAX_AGE),
         }
 
 
@@ -111,7 +133,7 @@ class LimitRateHeaderMiddleware(BaseHTTPMiddleware):
         current_time = time.time()
         
         # Simple rate limiting: allow one request every N seconds per IP
-        if current_time - self.rate_limit_record[client_ip] < settings.RATE_LIMIT_SECONDS:
+        if current_time - self.rate_limit_record[client_ip] < Settings.RATE_LIMIT_SECONDS:
             return Response(content="Too Many Requests", status_code=429)
         
         self.rate_limit_record[client_ip] = current_time

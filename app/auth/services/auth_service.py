@@ -1,14 +1,12 @@
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
-from uuid import UUID, uuid4
-from config import logging
 from fastapi import Depends
 from passlib.context import CryptContext
 import jwt
 from jwt import PyJWTError
 from sqlalchemy.orm import Session
-from src.entities.user import User
-from models import RegisterUserRequest, Token
+from models.User import User
+from schemas.jwt_schema import Token
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from exceptions import AuthenticationError, UserNotFoundError, PasswordMismatchError, InvalidPasswordError
 from config.settings import Settings
@@ -23,8 +21,7 @@ class AuthService:
         self.ACCESS_TOKEN_EXPIRE_MINUTES = self.settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES or 30
         self.oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
         self.bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-        configure_logging(LogLevels.info)
-        self.logger = logging.getLogger(__name__)
+        self.logger = configure_logging(LogLevels.INFO)
 
     def authenticate_user(self, email: str, password: str, db: Session) -> User | bool:
         user = db.query(User).filter(User.email == email).first()

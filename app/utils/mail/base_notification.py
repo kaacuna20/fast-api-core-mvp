@@ -3,7 +3,7 @@ from starlette.responses import JSONResponse
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import EmailStr, BaseModel
 from typing import List
-from fastapi import UploadFile, File, HTTPException
+from fastapi import UploadFile, File, HTTPException, BackgroundTasks
 
 # pip install fastapi-mail pydantic-settings
 
