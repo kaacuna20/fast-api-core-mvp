@@ -1,0 +1,61 @@
+services:
+  api:
+    build: ./docker/api
+    dockerfile: Dockerfile
+    container_name: api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  database:
+    image: postgres:15
+    container_name: elecciones-database
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - elecciones-network
+
+  redis:
+    build:
+      context: ./docker/redis/
+      dockerfile: Dockerfile
+    container_name: redis_service
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+
+  celery:
+    build: .
+
+    command: celery -A app.worker worker --loglevel=info
+    container_name: celery_worker
+
+    volumes:
+      - .:/app
+      
+    environment:
+      - DEBUG=${DEBUG}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    
+    depends_on:
+      - redis
+      - api
+
+    networks:
+      - app-network
+
+    

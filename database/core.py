@@ -114,6 +114,12 @@ class QueryManager:
     def with_deleted(self):
         """Incluye registros eliminados (solo para SoftDeleteModel)"""
         return QueryManagerWithDeleted(self.model_class, session=self.external_session)
+    
+    def to_dict(self, instance) -> dict:
+        """Convierte una instancia a diccionario"""
+        if not instance:
+            return {}
+        return {column.name: getattr(instance, column.name) for column in instance.__table__.columns}
 
 
 class QueryManagerWithDeleted(QueryManager):

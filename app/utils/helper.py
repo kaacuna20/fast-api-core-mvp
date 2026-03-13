@@ -4,6 +4,12 @@ import time
 
 logger =  configure_logging(LogLevels.info)
 
+class DataResponse:
+    message: str = ""
+    data: dict | list= {}
+    status_code: int = 200
+    error: str = None
+
 
 def count_timer(func):
     """Decorator para medir el tiempo de ejecución de una función"""

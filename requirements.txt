@@ -11,3 +11,7 @@ passlib
 bcrypt==4.0.1
 python-multipart
 email-validator
+fastapi-mail
+PyJWT
+redis
+celery
