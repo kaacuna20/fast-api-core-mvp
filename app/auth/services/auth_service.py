@@ -11,6 +11,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from exceptions import AuthenticationError, UserNotFoundError, PasswordMismatchError, InvalidPasswordError
 from config.settings import Settings
 from config.logging import configure_logging, LogLevels
+from repository.queries.users_query import UsersQuery
 
 
 class AuthService:
@@ -22,9 +23,10 @@ class AuthService:
         self.oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
         self.bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
         self.logger = configure_logging(LogLevels.INFO)
+        self.user_query = UsersQuery()
 
-    def authenticate_user(self, email: str, password: str, db: Session) -> User | bool:
-        user = db.query(User).filter(User.email == email).first()
+    def authenticate_user(self, email: str, password: str) -> User | bool:
+        user = self.user_query.get_user_by_email(email)
         if not user or not self.verify_password(password, user.password):
             self.logger.warning(f"Failed authentication attempt for email: {email}")
             return False
@@ -38,11 +40,11 @@ class AuthService:
         }
         return jwt.encode(encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
     
-    def get_current_user(self, token: Annotated[str, Depends(self.oauth2_bearer)], db: Session) -> User:
+    def get_current_user(self, token: Annotated[str, Depends(self.oauth2_bearer)]) -> User:
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             user_id: str = payload.get('id')
-            user = db.query(User).filter(User.id == int(user_id)).first()
+            user = self.user_query.get_user_by_id(int(user_id))
             if not user:
                 raise UserNotFoundError(user_id=user_id)
             return user
@@ -50,8 +52,8 @@ class AuthService:
             self.logger.warning(f"Token verification failed: {str(e)}")
             raise AuthenticationError()
         
-    def login_for_access_token(self, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session) -> Token:
-        user = self.authenticate_user(form_data.username, form_data.password, db)
+    def login_for_access_token(self, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+        user = self.authenticate_user(form_data.username, form_data.password)
         if not user:
             raise AuthenticationError()
         token = self.create_access_token(user.email, user.id, timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES))

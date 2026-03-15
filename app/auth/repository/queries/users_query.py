@@ -1,10 +1,14 @@
 from models.User import User
-from database.core import QueryManager
+
 
 
 class UsersQuery:
-    def __init__(self, session):
-        self.query_manager = QueryManager(User, session=session)
-    
+
+    def __init__(self):
+        self.user = User
+
     def get_user_by_email(self, email: str) -> User:
-        return self.query_manager.get(email=email)
+        return self.user.objects.filter(email=email).first()
+    
+    def get_user_by_id(self, user_id: int) -> User:
+        return self.user.objects.filter(id=user_id).first()

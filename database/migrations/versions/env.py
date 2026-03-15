@@ -16,22 +16,20 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from database import Base
-from models.models import User, Role, Tracking
+import sys
+from pathlib import Path
 
-target_metadata = Base.metadata
+# Agregar el directorio raíz al path para importaciones
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Importar la instancia global de database que tiene los modelos registrados
+from database.core import database
+from app.auth.models import *
+from app.core.models import *
 
-# Importar la URL de la base de datos
-from config.db_conection import Database
-from config.settings import Settings
+target_metadata = database.Base.metadata
 
-database = Database(settings=Settings())
-
+# Configurar la URL de la base de datos desde la instancia de Database
 config.set_main_option("sqlalchemy.url", database.render_database_url())
 
 
