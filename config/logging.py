@@ -36,18 +36,18 @@ class JsonFormatter(logging.Formatter):
 
 
 class LogLevels(StrEnum):
-    info = "INFO"
-    warn = "WARN"
-    error = "ERROR"
-    debug = "DEBUG"
+    INFO = "INFO"
+    WARN = "WARN"
+    ERROR = "ERROR"
+    DEBUG = "DEBUG"
 
 
-def configure_logging(log_level: str = LogLevels.error):
+def configure_logging(log_level: str = LogLevels.ERROR) -> logging.Logger:
     log_level = str(log_level).upper()
     log_levels = [level.value for level in LogLevels]
 
     if log_level not in log_levels:
-        log_level = LogLevels.error
+        log_level = LogLevels.ERROR
 
     # Crear directorio de logs si no existe
     log_dir = Path(__file__).parent.parent / "storage" / "logs"
@@ -79,7 +79,7 @@ def configure_logging(log_level: str = LogLevels.error):
 
     # Handler para consola (formato texto)
     console_handler = logging.StreamHandler()
-    if log_level == LogLevels.debug:
+    if log_level == LogLevels.DEBUG:
         console_handler.setFormatter(logging.Formatter(settings.LOG_FORMAT_DEBUG))
     else:
         console_handler.setFormatter(logging.Formatter(settings.LOG_FORMAT_CONSOLE))
