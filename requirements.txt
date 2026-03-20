@@ -15,3 +15,5 @@ fastapi-mail
 PyJWT
 redis
 celery
+uvloop
+httpx

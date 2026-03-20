@@ -49,3 +49,9 @@ def view_process_resources(func):
         logger.info(f"Recursos después de ejecutar {func.__name__}: CPU: 20%, Memoria: 150MB")  # Ejemplo estático
         return result
     return wrapper
+
+
+def to_camel(string: str) -> str:
+    """Convert snake_case string to camelCase"""
+    components = string.split("_")
+    return components[0] + "".join(x.title() for x in components[1:])
